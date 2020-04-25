@@ -97,10 +97,20 @@ class Configuration(object):
          f'requirements = {requirements}'
       ]
 
+def env_string(env_list):
+   # Gets a list of ENV vars; expands them and creates the
+   # 'environment = * entry for the condor submit script
+   if len(env_list) == 0:
+      return ''
+   else:
+      joined_envs = ' '.join([f'{e}={os.environ[e]}' for e in env_list])
+      return f'environment = \"{joined_envs}\"'
+
 class condor(object):
    def __init__(self,
          master_hostname = 'condor', # The old one was 'cvssp-condor-master'
          username = None,
+         export_envs = [],
 
          # All keys inside options are optional
          # 'options.known_hosts' contain the filepath for unconventional 'known_hosts' file
@@ -110,6 +120,7 @@ class condor(object):
       # Track the parameters
       self.master_hostname = master_hostname
       self.username = getpass.getuser() if (username == None) else username
+      self.envs = env_string(export_envs)
       self.options = options
 
       # The central 'client' object
@@ -159,6 +170,7 @@ class condor(object):
          '#######################',
 
          '# Job configurations',
+         self.envs,
          *job.get_attributes(),
          'log = $(cluster).$(process).log',
          'error = $(cluster).$(process).err',

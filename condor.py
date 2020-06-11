@@ -2,7 +2,7 @@
 A software interface to Condor, written in Python.
 Author: Ayan Das
 
-Copyright 2019 Ayan Das
+Copyright 2020 Ayan Das
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files
 (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge,
@@ -28,14 +28,33 @@ except ImportError:
 import getpass, os, tempfile
 
 class Job(object):
+   
+   # Some pre-defined flags
+   IF_NEEDED = 'IF_NEEDED'
+   YES = 'YES'
+   NO = 'NO'
+   ON_EXIT = 'ON_EXIT'
+   ON_EXIT_OR_EVICT = 'ON_EXIT_OR_EVICT'
+
    def __init__(self,
          executable = None, # The executable to run. E.g.: 'bash', 'python' etc.
          program_file = None, # The file to run. If 'None', it is basically a command invocation
+         should_transfer_files = 'IF_NEEDED',
+         when_to_transfer_output = 'ON_EXIT',
+         stream_output = True,
+         tag=None,
          *,
-         arguments = dict() # Arguments. dict(p=4, gpu=None)
+         arguments = dict(), # Arguments. dict(p=4, gpu=None)
+         pos_arguments = [],
       ):
 
       # Track parameters
+      assert should_transfer_files in [Job.IF_NEEDED, Job.YES, Job.NO], 'Illegal value for "should_transfer_files"'
+      self.should_transfer_files = should_transfer_files
+      assert when_to_transfer_output in [Job.ON_EXIT, Job.ON_EXIT_OR_EVICT], 'Illegal value for "when_to_transfer_output"'
+      self.when_to_transfer_output = when_to_transfer_output
+      self.stream_output = 'True' if bool(stream_output) else 'False'
+      self.tag = '$(cluster).$(process)' if tag is None else str(tag)
       self.executable = executable if os.path.isabs(executable) \
                                  else os.popen(f'which {executable}').read()[:-1]
       if program_file != None:
@@ -43,6 +62,14 @@ class Job(object):
                                         else os.path.abspath(program_file)
       else:
          self.program_file = '' # Empty string helps constructing the full command
+      
+      if isinstance(pos_arguments, str):
+         self.pos_arguments = pos_arguments
+      else:
+         # construct the position argument sub-string from the list
+         pos_arglist = [str(a) for a in pos_arguments]
+         self.pos_arguments = ' '.join(pos_arglist)
+
       if isinstance(arguments, str):
          self.arguments = arguments
       else:
@@ -53,12 +80,21 @@ class Job(object):
          self.arguments = ' '.join(arglist)
 
       # construct full argument string
-      self.arguments = ' '.join([self.program_file, self.arguments])
+      self.arguments = ' '.join([self.program_file, self.pos_arguments, self.arguments])
 
    def get_attributes(self):
       return [
          f'executable = {self.executable}',
-         f'arguments = {self.arguments}'
+         f'arguments = {self.arguments}',
+         
+         f'should_transfer_files = {self.should_transfer_files}',
+         f'when_to_transfer_output = {self.when_to_transfer_output}',
+         f'stream_output = {self.stream_output}',
+
+         # logging files
+         f'log = {self.tag}.log',
+         f'error = {self.tag}.err',
+         f'output = {self.tag}.out'
       ]
 
 class Configuration(object):
@@ -163,7 +199,7 @@ class condor(object):
          for line in err:
             print(line, end='')
 
-   def submit(self, job, config, keep_condor_file=False):
+   def submit(self, job, config, keep_condor_file=False, dry_run=False):
       # full attributes list (job and system configurations)
       attributes = [
          '## HTCondor submit file',
@@ -172,11 +208,6 @@ class condor(object):
          '# Job configurations',
          self.envs,
          *job.get_attributes(),
-         'log = $(cluster).$(process).log',
-         'error = $(cluster).$(process).err',
-         'output = $(cluster).$(process).out',
-         'should_transfer_files = YES',
-         'stream_output = True',
 
          '# System configurations',
          *config.get_attributes(),
@@ -193,7 +224,9 @@ class condor(object):
          submit_filename = os.path.abspath(submitfile.name)
 
       pwd = os.path.abspath('.')
-      self.execute(f'cd {pwd}; condor_submit {submit_filename}')
+      if not dry_run:
+         self.execute(f'cd {pwd}; condor_submit {submit_filename}')
 
+      keep_condor_file = keep_condor_file or dry_run
       if not keep_condor_file:
          os.remove(submit_filename)

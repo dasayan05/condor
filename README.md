@@ -10,10 +10,25 @@ Author: Ayan Das
 
 ### Setup:
 
-Clone this repo anywhere (e.g. `/path/to/repo`) on the local system and put the following on your `.bashrc` (or whatever shell you use)
+Clone this repository anywhere (e.g. `<local/path/to/repo>`):
 
 ```
-export PYTHONPATH=${PYTHONPATH}:/path/to/repo
+git clone https://github.com/dasayan05/condor.git <local/path/to/repo>
+```
+
+1. Install it with
+
+```
+cd local/path/to/repo
+python setup.py install
+```
+
+OR
+
+2. Put the following on your `.bashrc` (or whatever shell you use)
+
+```
+export PYTHONPATH=${PYTHONPATH}:local/path/to/repo
 ```
 
 ### Usage:

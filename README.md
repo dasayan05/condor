@@ -31,17 +31,27 @@ conf = Configuration(request_CPUs=1, request_GPUs=1, gpu_memory_range=[8000,2400
 # This is the (example) job to be submitted.
 # python classifier.py --base ./ --root ${STORAGE}/datasets/quickdraw --batch_size 64 --n_classes 3 --epochs 5 --tag clsc3f7g10 --modelname clsc3f7g10
 
-with condor() as sess:
-    # open a session to condor login node
+with condor('condor') as sess:
+    # Open a session to condor login node with hostname 'condor'.
+    # Set up password-less ssh, otherwise it will ask for password
+    # everytime this 'with .. as' block is encountered.
 
     for bs in [8, 16, 32, 64]: # submit a bunch of jobs
+        
+        # It will autodetect the full path of your python executable
         j = Job('python', 'classifier.py',
+            # all arguments to the executable should be in the dictionary as follows.
+            # an entry 'epochs=30' in the dict will appear as 'python <file>.py --epochs 30'
             arguments=dict(
-                base=os.getcwd(), root=os.environ['STORAGE'] + '/datasets/quickdraw',
-                batch_size=bs, # Here's the variable 'bs'
-                n_classes=3, epochs=30,
-                tag='clsc3f7g10', modelname='clsc3f7g10'
-            ))
+                base=os.getcwd(),
+                root=os.environ['STORAGE'] + '/datasets/quickdraw',
+                batch_size=bs, # Here's the looped variable 'bs'
+                n_classes=3,
+                epochs=30,
+                tag='clsc3f7g10',
+                modelname='clsc3f7g10'
+            )
+        )
 
         # finally submit it
         sess.submit(j, conf)

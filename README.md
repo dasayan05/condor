@@ -47,4 +47,4 @@ with condor() as sess:
         sess.submit(j, conf)
 ```
 
-Note: You may have to type password (in case you don't have private keys set up)
+NOTE: It is recommended that you [set up password-less SSH](https://askubuntu.com/a/46935) to your condor login node. You may have to type password way too many times in case you don't.

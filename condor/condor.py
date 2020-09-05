@@ -104,7 +104,8 @@ class Configuration(object):
          request_memory = 4096, # Amount of RAM required
          has_storenext = True,
          gpu_memory_range = [0, 24000],
-         cuda_capability = 2.0
+         cuda_capability = 2.0,
+         no_priority = True
       ):
       
       # Track the parameters
@@ -115,6 +116,7 @@ class Configuration(object):
       self.gpu_memory_min = gpu_memory_range[0] # separate these ..
       self.gpu_memory_max = gpu_memory_range[1] # .. two parameters
       self.cuda_capability = cuda_capability
+      self.no_priority = no_priority # do not allocate priority machine
 
    def get_attributes(self):
       requirements = [
@@ -122,7 +124,8 @@ class Configuration(object):
          f'(HasStornext)'                                if self.has_storenext     else None,
          f'(CUDAGlobalMemoryMb > {self.gpu_memory_min})' if self.request_GPUs != 0 else None,
          f'(CUDAGlobalMemoryMb < {self.gpu_memory_max})' if self.request_GPUs != 0 else None,
-         f'(CUDACapability > {self.cuda_capability})'    if self.request_GPUs != 0 else None
+         f'(CUDACapability > {self.cuda_capability})'    if self.request_GPUs != 0 else None,
+         f'(NotProjectOwned)'                            if self.no_priority       else None
       ]
       requirements = ' && '.join([r for r in requirements if r != None])
       

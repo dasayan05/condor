@@ -42,9 +42,11 @@ class Job(object):
     def __init__(self,
                  executable=None,  # The executable to run. E.g.: 'bash', 'python' etc.
                  program_file=None,  # The file to run. If 'None', it is basically a command invocation
-                 should_transfer_files='IF_NEEDED',
-                 when_to_transfer_output='ON_EXIT',
-                 stream_output=True,
+                 should_transfer_files='YES',
+                 when_to_transfer_output='ON_EXIT_OR_EVICT',
+                 stream_output=False,
+                 can_checkpoint=True,
+                 approx_runtime=4,
                  tag=None,
                  *,
                  arguments=dict(),  # Arguments. dict(p=4, gpu=None)
@@ -59,7 +61,11 @@ class Job(object):
             Job.ON_EXIT, Job.ON_EXIT_OR_EVICT], 'Illegal value for "when_to_transfer_output"'
         self.when_to_transfer_output = when_to_transfer_output
         self.stream_output = 'True' if bool(stream_output) else 'False'
-        self.tag = '$(cluster).$(process)' if tag is None else str(tag)
+        self.can_checkpoint = 'True' if bool(can_checkpoint) else 'False'
+        assert isinstance(approx_runtime, int), 'Specify approx runtime as an integer (hour)'
+        self.approx_runtime = str(approx_runtime)
+        self.tag = tag
+        self.logfile = f"{'' if self.tag is None else self.tag}$(cluster).$(process)"
         self.executable = executable if os.path.isabs(executable) \
             else os.popen(f'which {executable}').read()[:-1]
         if program_file != None:
@@ -88,7 +94,7 @@ class Job(object):
         self.arguments = ' '.join([self.program_file, self.pos_arguments, self.arguments])
 
     def get_attributes(self):
-        return [
+        all_attrs = [
             f'executable = {self.executable}',
             f'arguments = {self.arguments}',
 
@@ -97,28 +103,46 @@ class Job(object):
             f'stream_output = {self.stream_output}',
 
             # logging files
-            f'log = {self.tag}.log',
-            f'error = {self.tag}.err',
-            f'output = {self.tag}.out'
+            f'log = {self.logfile}.log',
+            f'error = {self.logfile}.err',
+            f'output = {self.logfile}.out',
+
+            # new requirements for condor
+            f'+CanCheckpoint = {self.can_checkpoint}',
+            f'+JobRunTime = {self.approx_runtime}'
         ]
+
+        if self.tag is not None:
+            all_attrs.insert(0, f'JobBatchName = \"{self.tag}\"')
+
+        return all_attrs
 
 
 class Configuration(object):
+
     def __init__(self, *,
+                 universe='docker',
+                 docker_image='python:3.7.10-slim',
+                 extra_mounts=[],
                  request_CPUs=1,  # No. of CPUs required
                  request_GPUs=0,  # No. of GPUs required
                  request_memory=4096,  # Amount of RAM required
-                 has_storenext=True,
-                 gpu_memory_range=[0, 24000],
+                 has_storenext=False,
+                 gpu_memory_range=[2000, 24000],
                  cuda_capability=2.0,
-                 no_priority=True
+                 no_priority=False
                  ):
 
         # Track the parameters
+        self.universe = universe.lower()
+        assert self.universe in ['vanilla',
+                                 'docker'], 'universe can either be \"vanilla\" or \"docker\"'
+        self.docker_image = docker_image
         self.request_CPUs = request_CPUs
         self.request_GPUs = request_GPUs
         self.request_memory = request_memory
         self.has_storenext = has_storenext
+        self.extra_mounts = extra_mounts
         self.gpu_memory_min = gpu_memory_range[0]  # separate these ..
         self.gpu_memory_max = gpu_memory_range[1]  # .. two parameters
         self.cuda_capability = cuda_capability
@@ -136,21 +160,50 @@ class Configuration(object):
         requirements = ' && '.join([r for r in requirements if r != None])
 
         return [
+            f'universe = {self.universe}',
+            f'docker_image = {self.docker_image}',
             f'request_CPUs = {self.request_CPUs}',
             f'request_GPUs = {self.request_GPUs}',
             f'request_memory = {self.request_memory}',
-            f'requirements = {requirements}'
+            f'requirements = {requirements}',
+            f'+GPUMem = {self.gpu_memory_min}'
         ]
 
 
-def env_string(env_list):
+def get_top_level_mount():
+    cwd = os.getcwd()
+    home = os.path.expanduser('~')
+    if cwd.startswith(home):
+        # CWD is inside home directory; not recommended though
+        return home
+
+    project_spaces = os.listdir('/vol/research')
+    project_space_path = os.path.join('/vol/research', project_spaces[0])
+    if len(project_spaces) == 1:
+        if cwd.startswith(project_space_path):
+            # CWD is inside project space
+            return project_space_path
+        else:
+            raise OSError('Current working directory is neither in HOME nor PROJECT_SPACE')
+
+    raise OSError('There should be at max one project-space folder; contact library author')
+
+
+def env_string(env_list, extra_mounts=[], is_docker=True):
     # Gets a list of ENV vars; expands them and creates the
     # 'environment = * entry for the condor submit script
-    if len(env_list) == 0:
-        return ''
-    else:
-        joined_envs = ' '.join([f'{e}={os.environ[e]}' for e in env_list])
-        return f'environment = \"{joined_envs}\"'
+    envs_pairs = []
+
+    if is_docker:
+        mount_dirs = [get_top_level_mount(), *extra_mounts]
+        mount_dirs_comma_sep = ','.join(mount_dirs)
+        envs_pairs.append(f'mount={mount_dirs_comma_sep}')
+
+    if len(env_list) != 0:
+        envs_pairs.append([f'{e}={os.environ[e]}' for e in env_list])
+
+    joined_envs = ' '.join(envs_pairs)
+    return f'environment = \"{joined_envs}\"'
 
 
 class condor(object):
@@ -167,7 +220,8 @@ class condor(object):
         # Track the parameters
         self.master_hostname = master_hostname
         self.username = getpass.getuser() if (username == None) else username
-        self.envs = env_string(export_envs)
+        self.export_envs = export_envs
+        # self.envs = env_string(export_envs)
         self.options = options
 
         # The central 'client' object
@@ -213,13 +267,16 @@ class condor(object):
                 print(line, end='')
 
     def submit(self, job, config, keep_condor_file=False, dry_run=False):
+        envs = env_string(self.export_envs, config.extra_mounts,
+                          is_docker=(config.universe == 'docker'))
+
         # full attributes list (job and system configurations)
         attributes = [
             '## HTCondor submit file',
             '#######################',
 
             '# Job configurations',
-            self.envs,
+            envs,
             *job.get_attributes(),
 
             '# System configurations',

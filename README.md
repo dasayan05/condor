@@ -41,7 +41,15 @@ import os
 from condor import condor, Job, Configuration
 
 # Provide required configuration of machine
-conf = Configuration(request_CPUs=1, request_GPUs=1, gpu_memory_range=[8000,24000], cuda_capability=5.5)
+conf = Configuration(universe='docker', # OR 'vanilla'
+    # full container tag from DockerHub or 'registry.eps.surrey.ac.uk'
+    docker_image='pytorch/pytorch:1.7.0-cuda11.0-cudnn8-runtime',
+    # any extra folder to mount in docker; project space will be auto mounted :)
+    extra_mounts=['/vol/vssp'],
+    request_CPUs=1,
+    request_GPUs=1,
+    gpu_memory_range=[8000,24000],
+    cuda_capability=5.5)
 
 # This is the (example) job to be submitted.
 # python classifier.py --base ./ --root ${STORAGE}/datasets/quickdraw --batch_size 64 --n_classes 3 --epochs 5 --tag clsc3f7g10 --modelname clsc3f7g10
@@ -52,9 +60,10 @@ with condor('condor') as sess:
     # everytime this 'with .. as' block is encountered.
 
     for bs in [8, 16, 32, 64]: # submit a bunch of jobs
-        
+
         # It will autodetect the full path of your python executable
-        j = Job('python', 'classifier.py',
+        j = Job('/opt/conda/bin/python', # if docker, use absolute path to specify executables inside container
+            'classifier.py',
             # all arguments to the executable should be in the dictionary as follows.
             # an entry 'epochs=30' in the dict will appear as 'python <file>.py --epochs 30'
             arguments=dict(
@@ -65,7 +74,11 @@ with condor('condor') as sess:
                 epochs=30,
                 tag='clsc3f7g10',
                 modelname='clsc3f7g10'
-            )
+            ),
+            # some extra arguments for Job()
+            can_checkpoint=True,
+            approx_runtime=2, # in hours
+            tag='MyAwesomeJob' # give a cool name
         )
 
         # finally submit it

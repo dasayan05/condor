@@ -48,6 +48,7 @@ class Job(object):
                  can_checkpoint=True,
                  approx_runtime=4,
                  tag=None,
+                 artifact_dir='.',
                  *,
                  arguments=dict(),  # Arguments. dict(p=4, gpu=None)
                  pos_arguments=[],
@@ -65,7 +66,10 @@ class Job(object):
         assert isinstance(approx_runtime, int), 'Specify approx runtime as an integer (hour)'
         self.approx_runtime = str(approx_runtime)
         self.tag = tag
-        self.logfile = f"{'' if self.tag is None else self.tag}$(cluster).$(process)"
+
+        self.artifact_dir = artifact_dir
+        logfile = f"{'' if self.tag is None else self.tag}$(cluster).$(process)"
+        self.logfile = os.path.join(self.artifact_dir, logfile)
         self.executable = executable if os.path.isabs(executable) \
             else os.popen(f'which {executable}').read()[:-1]
         if program_file != None:

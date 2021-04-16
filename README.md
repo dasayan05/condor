@@ -78,7 +78,8 @@ with condor('condor') as sess:
             # some extra arguments for Job()
             can_checkpoint=True,
             approx_runtime=2, # in hours
-            tag='MyAwesomeJob' # give a cool name
+            tag='MyAwesomeJob', # give a cool name
+            artifact_dir='./junk' # puts all log files inside ./junk (must exists)
         )
 
         # finally submit it

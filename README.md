@@ -52,7 +52,7 @@ conf = Configuration(universe='docker', # OR 'vanilla'
     cuda_capability=5.5)
 
 # This is the (example) job to be submitted.
-# python classifier.py --base ./ --root ${STORAGE}/datasets/quickdraw --batch_size 64 --n_classes 3 --epochs 5 --tag clsc3f7g10 --modelname clsc3f7g10
+# python classifier.py --base ./ --root ${STORAGE}/datasets/quickdraw --batch_size 64 --n_classes 3 --epochs 5 --modelname clsc3f7g10
 
 with condor('condor') as sess:
     # Open a session to condor login node with hostname 'condor'.
@@ -60,6 +60,8 @@ with condor('condor') as sess:
     # everytime this 'with .. as' block is encountered.
 
     for bs in [8, 16, 32, 64]: # submit a bunch of jobs
+
+        tag = f'MyAwesomeJob_batch_{bs}'
 
         # It will autodetect the full path of your python executable
         j = Job('/opt/conda/bin/python', # if docker, use absolute path to specify executables inside container
@@ -72,14 +74,16 @@ with condor('condor') as sess:
                 batch_size=bs, # Here's the looped variable 'bs'
                 n_classes=3,
                 epochs=30,
-                tag='clsc3f7g10',
                 modelname='clsc3f7g10'
             ),
             # some extra arguments for Job()
             can_checkpoint=True,
             approx_runtime=2, # in hours
-            tag='MyAwesomeJob', # give a cool name
-            artifact_dir='./junk' # puts all log files inside ./junk (must exists)
+            tag=tag, # give a cool name
+            # puts all log files inside this directory (will be created if doesn't exists)
+            # for job specific directory use job-specific parameters to create the path;
+            # otherwise, use a job-agnostic directory e.g. './junk'
+            artifact_dir=f'./junk/{tag}'
         )
 
         # finally submit it

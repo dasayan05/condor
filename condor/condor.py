@@ -67,6 +67,9 @@ class Job(object):
         self.approx_runtime = str(approx_runtime)
         self.tag = tag
 
+        if not os.path.exists(artifact_dir):
+            # create the artifact directory, if doesn't exist
+            os.makedirs(artifact_dir)
         self.artifact_dir = artifact_dir
         logfile = f"{'' if self.tag is None else self.tag}$(cluster).$(process)"
         self.logfile = os.path.join(self.artifact_dir, logfile)

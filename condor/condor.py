@@ -177,32 +177,31 @@ class Configuration(object):
         ]
 
 
-def get_top_level_mount():
+def get_top_level_mount(project_space=None):
     cwd = os.getcwd()
     home = os.path.expanduser('~')
     if cwd.startswith(home):
         # CWD is inside home directory; not recommended though
         return home
 
-    project_spaces = os.listdir('/vol/research')
-    project_space_path = os.path.join('/vol/research', project_spaces[0])
-    if len(project_spaces) == 1:
-        if cwd.startswith(project_space_path):
-            # CWD is inside project space
-            return project_space_path
-        else:
-            raise OSError('Current working directory is neither in HOME nor PROJECT_SPACE')
+    PROJECT_ROOT = '/vol/research' # specific to CVSSP network storage
 
-    raise OSError('There should be at max one project-space folder; contact library author')
+    project_space_path = os.path.join(PROJECT_ROOT, project_space)
+    if not os.path.isdir(project_space_path):
+        raise OSError(f'There is no project space named {project_space}')
+    else:
+        return project_space_path
+
+    raise OSError('something went wrong; contact library author')
 
 
-def env_string(env_list, extra_mounts=[], is_docker=True):
+def env_string(env_list, extra_mounts=[], is_docker=True, project_space=None):
     # Gets a list of ENV vars; expands them and creates the
     # 'environment = * entry for the condor submit script
     envs_pairs = []
 
     if is_docker:
-        mount_dirs = [get_top_level_mount(), *extra_mounts]
+        mount_dirs = [get_top_level_mount(project_space=project_space), *extra_mounts]
         mount_dirs_comma_sep = ','.join(mount_dirs)
         envs_pairs.append(f'mount={mount_dirs_comma_sep}')
 
@@ -216,6 +215,7 @@ def env_string(env_list, extra_mounts=[], is_docker=True):
 class condor(object):
     def __init__(self,
                  master_hostname='condor',  # The old one was 'cvssp-condor-master'
+                 project_space=None,
                  username=None,
                  export_envs=[],
 
@@ -227,6 +227,8 @@ class condor(object):
         # Track the parameters
         self.master_hostname = master_hostname
         self.username = getpass.getuser() if (username == None) else username
+        assert project_space is not None, "Please provide the name of your project space folder"
+        self.project_space = project_space
         self.export_envs = export_envs
         # self.envs = env_string(export_envs)
         self.options = options
@@ -275,7 +277,8 @@ class condor(object):
 
     def submit(self, job, config, keep_condor_file=False, dry_run=False):
         envs = env_string(self.export_envs, config.extra_mounts,
-                          is_docker=(config.universe == 'docker'))
+                          is_docker=(config.universe == 'docker'),
+                          project_space=self.project_space)
 
         # full attributes list (job and system configurations)
         attributes = [

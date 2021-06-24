@@ -54,10 +54,11 @@ conf = Configuration(universe='docker', # OR 'vanilla'
 # This is the (example) job to be submitted.
 # python classifier.py --base ./ --root ${STORAGE}/datasets/quickdraw --batch_size 64 --n_classes 3 --epochs 5 --modelname clsc3f7g10
 
-with condor('condor') as sess:
+with condor('condor', project_space='myProject') as sess:
     # Open a session to condor login node with hostname 'condor'.
     # Set up password-less ssh, otherwise it will ask for password
     # everytime this 'with .. as' block is encountered.
+    # Also, provide the name of your projec space folder. It is required.
 
     for bs in [8, 16, 32, 64]: # submit a bunch of jobs
 

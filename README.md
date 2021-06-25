@@ -10,13 +10,15 @@ Author: Ayan Das
 
 ### Setup:
 
-Clone this repository anywhere (e.g. `<local/path/to/repo>`):
+1. Install the git repo as `pip` package
 
 ```
-git clone https://github.com/dasayan05/condor.git <local/path/to/repo>
+pip install git+https://github.com/dasayan05/condor.git
 ```
 
-1. Install it with
+OR
+
+2. Build and Install it manually with
 
 ```
 cd local/path/to/repo
@@ -25,10 +27,16 @@ python setup.py install
 
 OR
 
-2. Put the following on your `.bashrc` (or whatever shell you use)
+3. Clone this repository anywhere (e.g. `<local/path/to/repo>`):
 
 ```
-export PYTHONPATH=${PYTHONPATH}:local/path/to/repo
+git clone https://github.com/dasayan05/condor.git <local/path/to/repo>
+```
+
+.. then put the following on your `.bashrc` (or whatever shell you use)
+
+```
+export PYTHONPATH=${PYTHONPATH}:<local/path/to/repo>
 ```
 
 ### Usage:

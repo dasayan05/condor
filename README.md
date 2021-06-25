@@ -18,16 +18,7 @@ pip install git+https://github.com/dasayan05/condor.git
 
 OR
 
-2. Build and Install it manually with
-
-```
-cd local/path/to/repo
-python setup.py install
-```
-
-OR
-
-3. Clone this repository anywhere (e.g. `<local/path/to/repo>`):
+2. Clone this repository anywhere (e.g. `<local/path/to/repo>`):
 
 ```
 git clone https://github.com/dasayan05/condor.git <local/path/to/repo>
@@ -37,6 +28,15 @@ git clone https://github.com/dasayan05/condor.git <local/path/to/repo>
 
 ```
 export PYTHONPATH=${PYTHONPATH}:<local/path/to/repo>
+```
+
+OR
+
+3. Build and Install it manually with
+
+```
+cd <local/path/to/repo>
+python setup.py install
 ```
 
 ### Usage:

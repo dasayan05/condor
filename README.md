@@ -12,7 +12,7 @@ Author: Ayan Das
 
 1. Install the git repo as `pip` package
 
-```
+```bash
 pip install git+https://github.com/dasayan05/condor.git
 ```
 
@@ -20,13 +20,13 @@ OR
 
 2. Clone this repository anywhere (e.g. `<local/path/to/repo>`):
 
-```
+```bash
 git clone https://github.com/dasayan05/condor.git <local/path/to/repo>
 ```
 
 .. then put the following on your `.bashrc` (or whatever shell you use)
 
-```
+```bash
 export PYTHONPATH=${PYTHONPATH}:<local/path/to/repo>
 ```
 
@@ -34,7 +34,7 @@ OR
 
 3. Build and Install it manually with
 
-```
+```bash
 cd <local/path/to/repo>
 python setup.py install
 ```
@@ -44,7 +44,7 @@ python setup.py install
 Create a python file `<anything>.py` and keep it in the root of your own project.
 The following example snippet shows the basic usage of the library:
 
-```
+```bash
 import os
 from condor import condor, Job, Configuration
 

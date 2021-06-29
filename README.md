@@ -44,7 +44,7 @@ python setup.py install
 Create a python file `<anything>.py` and keep it in the root of your own project.
 The following example snippet shows the basic usage of the library:
 
-```bash
+```python
 import os
 from condor import condor, Job, Configuration
 

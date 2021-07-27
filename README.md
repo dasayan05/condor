@@ -57,7 +57,11 @@ conf = Configuration(universe='docker', # OR 'vanilla'
     request_CPUs=1,
     request_GPUs=1,
     gpu_memory_range=[8000,24000],
-    cuda_capability=5.5)
+    cuda_capability=5.5,
+    # following two lists must not overlap
+    restricted_machines=['bad.server.com', 'worse.server.com'], # not allowed to run on these
+    allowed_machines=['favmachine.server.com'] # can ONLY run on these machines
+)
 
 # This is the (example) job to be submitted.
 # python classifier.py --base ./ --root ${STORAGE}/datasets/quickdraw --batch_size 64 --n_classes 3 --epochs 5 --modelname clsc3f7g10

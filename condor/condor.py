@@ -161,7 +161,7 @@ class Configuration(object):
 
     def get_attributes(self):
         allowed_machine_req = ' || '.join([f'(machine == \"{mach}\")' for mach in self.allowed_machines])
-        restricted_machine_req = ' && '.join([f'(machine == \"{mach}\")' for mach in self.restricted_machines])
+        restricted_machine_req = ' && '.join([f'(machine != \"{mach}\")' for mach in self.restricted_machines])
 
         requirements = [
             # Requirement list separated by '&&' in 'requirement' attribute

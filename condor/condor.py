@@ -160,6 +160,9 @@ class Configuration(object):
         self.allowed_machines = allowed_machines
 
     def get_attributes(self):
+        allowed_machine_req = ' || '.join([f'(machine == \"{mach}\")' for mach in self.allowed_machines])
+        restricted_machine_req = ' && '.join([f'(machine == \"{mach}\")' for mach in self.restricted_machines])
+
         requirements = [
             # Requirement list separated by '&&' in 'requirement' attribute
             f'(HasStornext)' if self.has_storenext else None,
@@ -167,8 +170,8 @@ class Configuration(object):
             f'(CUDAGlobalMemoryMb < {self.gpu_memory_max})' if self.request_GPUs != 0 else None,
             f'(CUDACapability > {self.cuda_capability})' if self.request_GPUs != 0 else None,
             f'(NotProjectOwned)' if self.no_priority else None,
-            *[f'(machine != \"{mach}\")' for mach in self.restricted_machines],
-            *[f'(machine == \"{mach}\")' for mach in self.allowed_machines]
+            f'({restricted_machine_req})' if len(self.restricted_machines) > 0 else None,
+            f'({allowed_machine_req})' if len(self.allowed_machines) > 0 else None
         ]
         requirements = ' && '.join([r for r in requirements if r != None])
 

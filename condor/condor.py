@@ -215,7 +215,7 @@ def env_string(env_list, extra_mounts=[], is_docker=True, project_space=None):
         envs_pairs.append(f'mount={mount_dirs_comma_sep}')
 
     if len(env_list) != 0:
-        envs_pairs.append([f'{e}={os.environ[e]}' for e in env_list])
+        envs_pairs.extend([f'{e}={os.environ[e]}' for e in env_list])
 
     joined_envs = ' '.join(envs_pairs)
     return f'environment = \"{joined_envs}\"'

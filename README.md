@@ -100,7 +100,8 @@ with condor('condor', project_space='myProject') as sess:
         )
 
         # finally submit it
-        sess.submit(j, conf)
+        job_id = sess.submit(j, conf)
+        print(f'Submitted Job ID: {job_id}')
 ```
 
 NOTE: It is recommended that you [set up password-less SSH](https://askubuntu.com/a/46935) to your condor login node. You may have to type password way too many times in case you don't.

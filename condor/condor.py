@@ -26,7 +26,7 @@ except ImportError:
 
 # standard library imports
 import getpass
-import os
+import os, re
 import tempfile
 
 
@@ -272,6 +272,16 @@ class condor(object):
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.client.close()
+    
+    def _parse_cluster_id(self, messages):
+        _, message = messages
+        # The second line of the output message must have the format ..
+        # '1 job(s) submitted to cluster xxxxx. If that isn't the case
+        # something is wrong; contact library author
+        numbers = re.findall(r'\b\d+\b', message)
+        assert (int(numbers[0]) == 1) and (len(numbers) == 2), \
+            "Couldn't parse the output message; please contact the author."
+        return int(numbers[1])
 
     def execute(self, command):
         _, out, err = self.client.exec_command(command, get_pty=True)
@@ -280,9 +290,13 @@ class condor(object):
         if len(err) == 0:
             for line in out:
                 print(line, end='')
+            return (True, out)
         else:
             for line in err:
                 print(line, end='')
+            return (False, err)
+        
+        # basically return (status, mesasges_list)
 
     def submit(self, job, config, keep_condor_file=False, dry_run=False):
         envs = env_string(self.export_envs, config.extra_mounts,
@@ -314,8 +328,18 @@ class condor(object):
 
         pwd = os.path.abspath('.')
         if not dry_run:
-            self.execute(f'cd {pwd}; condor_submit {submit_filename}')
+            # status == True means 'executed successfully'
+            status, msg = self.execute(f'cd {pwd}; condor_submit {submit_filename}')
+        else:
+            # dry run is always unsuccessful
+            status, msg = False, [ ]
 
         keep_condor_file = keep_condor_file or dry_run
         if not keep_condor_file:
             os.remove(submit_filename)
+
+        if status:
+            return self._parse_cluster_id(msg)
+        else:
+            # didn't succeed or dry run
+            return -1

@@ -46,7 +46,7 @@ The following example snippet shows the basic usage of the library:
 
 ```python
 import os
-from condor import condor, Job, Configuration
+from condor import condor, Job, Configuration, Grid
 
 # Provide required configuration of machine
 conf = Configuration(universe='docker', # OR 'vanilla'
@@ -72,7 +72,8 @@ with condor('condor', project_space='myProject') as sess:
     # everytime this 'with .. as' block is encountered.
     # Also, provide the name of your projec space folder. It is required.
 
-    for bs in [8, 16, 32, 64]: # submit a bunch of jobs
+    # easy grid search with 'Grid', access each variable with '.<name>'
+    for combination in Grid(batch_size=[8, 16, 32, 64], lr=[1e-2, 1e-3]): # submit a bunch of jobs
 
         tag = f'MyAwesomeJob_batch_{bs}'
 
@@ -84,7 +85,8 @@ with condor('condor', project_space='myProject') as sess:
             arguments=dict(
                 base=os.getcwd(),
                 root=os.environ['STORAGE'] + '/datasets/quickdraw',
-                batch_size=bs, # Here's the looped variable 'bs'
+                batch_size=combination.batch_size, # Here's the looped variable 'bs'
+                learning_rate=combination.lr,
                 n_classes=3,
                 epochs=30,
                 modelname='clsc3f7g10'

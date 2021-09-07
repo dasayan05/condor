@@ -9,9 +9,9 @@ class Grid:
         self.values = []
         for val in self.gdict.values():
             if not isinstance(val, (list, tuple)):
-                self.values.append([val,])
-            else:
-                self.values.append(val)
+                raise TypeError('Each parameter set must be denoted by a list/tuple')
+            
+            self.values.append(val)
         
         self.combs = list(product(*self.values))
         

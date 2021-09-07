@@ -30,5 +30,5 @@ class Grid:
 
 
 if __name__ == '__main__':
-    for combination in Grid(lr=[1e-2, 1e-3, 1e-4], batch_size=[32, 64], hidden_size=96):
-        print(combination)
+    for (lr, bs, hid) in Grid(lr=[1e-2, 1e-3, 1e-4], batch_size=[32, 64], hidden_size=[96]):
+        print(lr, bs, hid)

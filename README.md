@@ -72,8 +72,9 @@ with condor('condor', project_space='myProject') as sess:
     # everytime this 'with .. as' block is encountered.
     # Also, provide the name of your projec space folder. It is required.
 
-    # easy grid search with 'Grid', access each variable with '.<name>'
-    for combination in Grid(batch_size=[8, 16, 32, 64], lr=[1e-2, 1e-3]): # submit a bunch of jobs
+    # easy grid search with 'Grid', access each variable with '.<name>' .. OR
+    # we can de-structure them in-place (make sure the order is same)
+    for (batch_size, learning_rate) in Grid(batch_size=[8, 16, 32, 64], lr=[1e-2, 1e-3]): # submit a bunch of jobs
 
         tag = f'MyAwesomeJob_batch_{bs}'
 
@@ -85,8 +86,8 @@ with condor('condor', project_space='myProject') as sess:
             arguments=dict(
                 base=os.getcwd(),
                 root=os.environ['STORAGE'] + '/datasets/quickdraw',
-                batch_size=combination.batch_size, # Here's the looped variable 'bs'
-                learning_rate=combination.lr,
+                batch_size=batch_size, # Here's the looped variable 'bs'
+                learning_rate=learning_rate,
                 n_classes=3,
                 epochs=30,
                 modelname='clsc3f7g10'

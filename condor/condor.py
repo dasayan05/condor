@@ -135,6 +135,7 @@ class Configuration(object):
                  request_GPUs=0,  # No. of GPUs required
                  request_memory=4096,  # Amount of RAM required
                  has_storenext=False,
+                 has_weka=False,
                  gpu_memory_range=[2000, 24000],
                  cuda_capability=2.0,
                  no_priority=False,
@@ -151,6 +152,7 @@ class Configuration(object):
         self.request_GPUs = request_GPUs
         self.request_memory = request_memory
         self.has_storenext = has_storenext
+        self.has_weka = has_weka
         self.extra_mounts = extra_mounts
         self.gpu_memory_min = gpu_memory_range[0]  # separate these ..
         self.gpu_memory_max = gpu_memory_range[1]  # .. two parameters
@@ -166,6 +168,7 @@ class Configuration(object):
         requirements = [
             # Requirement list separated by '&&' in 'requirement' attribute
             f'(HasStornext)' if self.has_storenext else None,
+            f'(HasWeka)' if self.has_weka else None,
             f'(CUDAGlobalMemoryMb > {self.gpu_memory_min})' if self.request_GPUs != 0 else None,
             f'(CUDAGlobalMemoryMb < {self.gpu_memory_max})' if self.request_GPUs != 0 else None,
             f'(CUDACapability > {self.cuda_capability})' if self.request_GPUs != 0 else None,
